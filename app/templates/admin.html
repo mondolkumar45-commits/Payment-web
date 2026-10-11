@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PayHub Admin</title>
+  <style>
+    :root { --bg:#0f172a; --card:#1e293b; --accent:#a78bfa; --text:#e2e8f0; --muted:#94a3b8; --danger:#f87171; --ok:#4ade80; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:system-ui,sans-serif; background:var(--bg); color:var(--text); }
+    header { padding:1rem 1.5rem; border-bottom:1px solid #334155; }
+    main { max-width:1100px; margin:0 auto; padding:1.25rem; }
+    .card { background:var(--card); border-radius:12px; padding:1.2rem; margin-bottom:1rem; }
+    .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:.75rem; }
+    .stat { background:#0f172a; border-radius:10px; padding:.85rem; text-align:center; }
+    .stat b { display:block; font-size:1.35rem; }
+    input { width:100%; max-width:280px; padding:.55rem; border-radius:8px; border:1px solid #334155; background:#0f172a; color:var(--text); margin:.25rem .5rem .5rem 0; }
+    button { padding:.5rem .9rem; border:none; border-radius:8px; background:var(--accent); color:#0f172a; font-weight:600; cursor:pointer; margin:.15rem; }
+    button.danger { background:var(--danger); }
+    button.secondary { background:#334155; color:var(--text); }
+    table { width:100%; border-collapse:collapse; font-size:.85rem; }
+    th, td { text-align:left; padding:.45rem; border-bottom:1px solid #334155; }
+    .muted { color:var(--muted); } .ok { color:var(--ok); } .err { color:var(--danger); }
+    .hidden { display:none; }
+    pre { background:#0f172a; padding:.75rem; border-radius:8px; font-size:.8rem; overflow:auto; max-height:200px; }
+  </style>
+</head>
+<body>
+<header><strong>PayHub Admin</strong></header>
+<main>
+  <div id="loginCard" class="card">
+    <h2>Admin Login</h2>
+    <input id="email" type="email" placeholder="admin email" />
+    <input id="password" type="password" placeholder="password" />
+    <button onclick="login()">Login</button>
+    <p id="msg" class="muted"></p>
+  </div>
+  <div id="panel" class="hidden">
+    <div class="card"><div class="stats" id="stats"></div></div>
+    <div class="card">
+      <h2>Users</h2>
+      <input id="search" placeholder="Search email..." oninput="loadUsers()" />
+      <button class="secondary" onclick="loadUsers()">Refresh</button>
+      <div id="table"></div>
+    </div>
+    <div class="card">
+      <h2>User invoices / match</h2>
+      <input id="uid" placeholder="User ID" />
+      <button class="secondary" onclick="loadInv()">Load Invoices</button>
+      <button onclick="matchUser()">Force Match</button>
+      <pre id="detail">—</pre>
+    </div>
+    <button class="danger" onclick="logout()">Logout</button>
+  </div>
+</main>
+<script>
+let token = localStorage.getItem("ph_admin_token") || "";
+const H = () => ({ "Content-Type":"application/json", Authorization:"Bearer "+token });
+
+async function login() {
+  const r = await fetch("/api/v1/auth/login", { method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ email: email.value, password: password.value }) });
+  const d = await r.json();
+  if (!r.ok || !d.is_admin) { msg.textContent = d.detail || "Not admin"; msg.className="err"; return; }
+  token = d.access_token; localStorage.setItem("ph_admin_token", token);
+  loginCard.classList.add("hidden"); panel.classList.remove("hidden");
+  loadStats(); loadUsers();
+}
+async function loadStats() {
+  const s = await fetch("/api/v1/admin/stats", { headers: H() }).then(r=>r.json());
+  stats.innerHTML = `
+    <div class="stat"><b>${s.users_total}</b><span class="muted">Users</span></div>
+    <div class="stat"><b class="ok">${s.users_active}</b><span class="muted">Active</span></div>
+    <div class="stat"><b>${s.users_with_binance}</b><span class="muted">Binance</span></div>
+    <div class="stat"><b>${s.invoices_total}</b><span class="muted">Invoices</span></div>
+    <div class="stat"><b>${s.invoices_pending}</b><span class="muted">Pending</span></div>
+    <div class="stat"><b class="ok">${s.invoices_paid}</b><span class="muted">Paid</span></div>
+    <div class="stat"><b>${s.paid_volume}</b><span class="muted">Volume</span></div>`;
+}
+async function loadUsers() {
+  const q = search.value.trim();
+  const r = await fetch("/api/v1/admin/users" + (q?`?q=${encodeURIComponent(q)}`:""), { headers: H() });
+  const list = await r.json();
+  if (!Array.isArray(list)) { table.textContent="Error"; return; }
+  let h = "<table><tr><th>ID</th><th>Email</th><th>Active</th><th>BN</th><th>Inv</th><th>Paid</th><th></th></tr>";
+  for (const u of list) {
+    h += `<tr>
+      <td>${u.id}</td><td>${u.email}${u.is_admin?" ★":""}</td>
+      <td class="${u.is_active?"ok":"err"}">${u.is_active?"Yes":"No"}</td>
+      <td>${u.binance_configured?"Yes":"—"}</td><td>${u.invoice_count}</td><td>${u.paid_count}</td>
+      <td>${u.is_admin?"":`<button class="danger" onclick="toggle(${u.id})">Toggle</button>
+        <button class="secondary" onclick="uid.value=${u.id}">Select</button>`}</td></tr>`;
+  }
+  table.innerHTML = h+"</table>";
+}
+async function toggle(id) {
+  await fetch("/api/v1/admin/users/"+id+"/toggle-active", { method:"POST", headers: H() });
+  loadUsers(); loadStats();
+}
+async function loadInv() {
+  const r = await fetch(`/api/v1/admin/users/${uid.value}/invoices?limit=30`, { headers: H() });
+  detail.textContent = JSON.stringify(await r.json(), null, 2);
+}
+async function matchUser() {
+  const r = await fetch(`/api/v1/admin/users/${uid.value}/match`, { method:"POST", headers: H() });
+  detail.textContent = JSON.stringify(await r.json(), null, 2);
+  loadStats();
+}
+function logout() {
+  localStorage.removeItem("ph_admin_token"); token="";
+  panel.classList.add("hidden"); loginCard.classList.remove("hidden");
+}
+if (token) { loginCard.classList.add("hidden"); panel.classList.remove("hidden"); loadStats(); loadUsers(); }
+</script>
+</body>
+</html>
