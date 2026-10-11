@@ -1,0 +1,23 @@
+name: Fix layout
+on: workflow_dispatch
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild proper folders from zip
+        run: |
+          set -e
+          mkdir /tmp/x
+          unzip -q payhub_multitenant_mfs.zip -d /tmp/x
+          find . -maxdepth 1 -type f ! -name payhub_multitenant_mfs.zip -delete
+          cp -r /tmp/x/payhub_mt/. .
+          rm payhub_multitenant_mfs.zip
+          ls -a
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add -A
+          git commit -m "Fix project layout"
+          git push
