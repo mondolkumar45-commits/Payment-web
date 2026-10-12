@@ -5,6 +5,8 @@ from decimal import Decimal, ROUND_HALF_UP
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request, Query
+from pathlib import Path
+
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, func, and_, or_
@@ -177,19 +179,24 @@ async def _send_notify(invoice: Invoice, owner: User):
 
 # ═══════════════ Pages ═══════════════
 
+def _page(name: str) -> HTMLResponse:
+    """Serve a static HTML page (no Jinja variables; independent of Starlette's TemplateResponse API)."""
+    return HTMLResponse((Path(__file__).parent / "templates" / name).read_text(encoding="utf-8"))
+
+
 @app.get("/", response_class=HTMLResponse)
-def home(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+def home():
+    return _page("index.html")
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
-def dashboard_page(request: Request):
-    return templates.TemplateResponse("dashboard.html", {"request": request})
+def dashboard_page():
+    return _page("dashboard.html")
 
 
 @app.get("/admin", response_class=HTMLResponse)
-def admin_page(request: Request):
-    return templates.TemplateResponse("admin.html", {"request": request})
+def admin_page():
+    return _page("admin.html")
 
 
 @app.get("/health")
