@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PayHub Dashboard</title>
+  <style>
+    :root {
+      --bg: #0f1419; --card: #1a2332; --border: #2d3a4f; --text: #e7ecf3;
+      --muted: #8b9bb4; --accent: #3b82f6; --ok: #10b981; --warn: #f59e0b; --danger: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 1.25rem; }
+    header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0 1.5rem; flex-wrap: wrap; gap: 0.75rem; }
+    header h1 { font-size: 1.4rem; } header h1 span { color: var(--accent); }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem; margin-bottom: 1.25rem; }
+    .card h2 { font-size: 1.05rem; margin-bottom: 1rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+    label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 0.3rem; }
+    input, select, textarea {
+      width: 100%; padding: 0.55rem 0.75rem; border-radius: 6px; border: 1px solid var(--border);
+      background: #0f1419; color: var(--text); font-size: 0.95rem; margin-bottom: 0.75rem;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+    .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; }
+    button, .btn {
+      display: inline-block; padding: 0.55rem 1rem; border-radius: 6px; border: none;
+      font-weight: 600; font-size: 0.9rem; cursor: pointer; background: var(--accent); color: #fff;
+    }
+    button:hover, .btn:hover { filter: brightness(1.1); }
+    button.secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    button.danger { background: var(--danger); }
+    button.ok { background: var(--ok); }
+    .hidden { display: none !important; }
+    #authBox, #appBox { }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
+    .stat { background: #0f1419; border-radius: 8px; padding: 0.9rem; text-align: center; border: 1px solid var(--border); }
+    .stat .n { font-size: 1.4rem; font-weight: 700; }
+    .stat .l { font-size: 0.75rem; color: var(--muted); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th, td { text-align: left; padding: 0.5rem 0.4rem; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 500; font-size: 0.8rem; }
+    .badge { display: inline-block; padding: 0.15rem 0.45rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+    .badge.PENDING { background: #422006; color: #fbbf24; }
+    .badge.PAID { background: #064e3b; color: #34d399; }
+    .badge.EXPIRED { background: #3f1a1a; color: #f87171; }
+    .msg { padding: 0.6rem 0.9rem; border-radius: 6px; margin-bottom: 0.75rem; font-size: 0.9rem; }
+    .msg.ok { background: #064e3b; color: #a7f3d0; }
+    .msg.err { background: #450a0a; color: #fecaca; }
+    .msg.info { background: #1e3a5f; color: #bfdbfe; }
+    code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85rem; }
+    .copy { cursor: pointer; color: var(--accent); text-decoration: underline; }
+    .tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .tabs button { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+    .tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .flex { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Pay<span>Hub</span> Dashboard</h1>
+      <div class="flex">
+        <span id="userEmail" class="mono" style="color:var(--muted);font-size:0.9rem"></span>
+        <button class="secondary" id="btnLogout" onclick="logout()">Logout</button>
+        <a href="/" style="color:var(--muted);font-size:0.85rem">Home</a>
+      </div>
+    </header>
+
+    <!-- AUTH -->
+    <div id="authBox">
+      <div class="card" style="max-width:420px;margin:2rem auto">
+        <h2>Login / Register</h2>
+        <div id="authMsg"></div>
+        <label>Email</label>
+        <input id="authEmail" type="email" placeholder="you@example.com" />
+        <label>Password</label>
+        <input id="authPass" type="password" placeholder="min 8 chars" />
+        <label id="lblName" class="hidden">Display name (optional)</label>
+        <input id="authName" class="hidden" type="text" placeholder="Name" />
+        <div class="flex" style="margin-top:0.5rem">
+          <button id="btnLogin" onclick="doLogin()">Login</button>
+          <button class="secondary" id="btnReg" onclick="doRegister()">Register</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- APP -->
+    <div id="appBox" class="hidden">
+      <div id="globalMsg"></div>
+
+      <div class="stats" id="statsRow">
+        <div class="stat"><div class="n" id="sPending">—</div><div class="l">Pending</div></div>
+        <div class="stat"><div class="n" id="sPaid">—</div><div class="l">Paid</div></div>
+        <div class="stat"><div class="n" id="sExpired">—</div><div class="l">Expired</div></div>
+        <div class="stat"><div class="n" id="sVolume">—</div><div class="l">Paid volume</div></div>
+      </div>
+
+      <div class="tabs">
+        <button class="active" data-tab="invoices" onclick="showTab('invoices')">Invoices</button>
+        <button data-tab="binance" onclick="showTab('binance')">Binance</button>
+        <button data-tab="mfs" onclick="showTab('mfs')">Mobile Money</button>
+        <button data-tab="profile" onclick="showTab('profile')">Profile & Keys</button>
+      </div>
+
+      <!-- INVOICES -->
+      <div id="tab-invoices">
+        <div class="card">
+          <h2>Create Invoice</h2>
+          <div class="row">
+            <div>
+              <label>Customer ID</label>
+              <input id="invCust" placeholder="order-123" />
+            </div>
+            <div>
+              <label>Amount</label>
+              <input id="invAmt" type="number" step="0.01" min="0.01" placeholder="100" />
+            </div>
+            <div>
+              <label>Currency</label>
+              <select id="invCur" onchange="toggleMethod()">
+                <option value="USDT">USDT (Binance)</option>
+                <option value="BDT">BDT (Mobile Money)</option>
+              </select>
+            </div>
+            <div id="methodWrap" class="hidden">
+              <label>Method (optional)</label>
+              <select id="invMethod">
+                <option value="">Any configured</option>
+                <option value="bkash">bKash</option>
+                <option value="nagad">Nagad</option>
+                <option value="rocket">Rocket</option>
+                <option value="upay">Upay</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label>Note (optional)</label>
+              <input id="invNote" placeholder="Order #..." />
+            </div>
+            <div>
+              <label>Notify URL (optional)</label>
+              <input id="invNotify" placeholder="https://yourbot.com/hook" />
+            </div>
+            <div style="display:flex;align-items:flex-end;padding-bottom:0.75rem">
+              <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer">
+                <input type="checkbox" id="invUnique" style="width:auto;margin:0" /> Unique amount
+              </label>
+            </div>
+          </div>
+          <button onclick="createInvoice()">Create Invoice</button>
+          <button class="secondary" onclick="runMatch()">Match All</button>
+          <button class="secondary" onclick="expireStale()">Expire Stale</button>
+        </div>
+
+        <div class="card">
+          <h2>Recent Invoices</h2>
+          <div class="flex" style="margin-bottom:0.75rem">
+            <select id="filterStatus" onchange="loadInvoices()" style="width:auto">
+              <option value="">All status</option>
+              <option value="PENDING">Pending</option>
+              <option value="PAID">Paid</option>
+              <option value="EXPIRED">Expired</option>
+            </select>
+            <button class="secondary" onclick="loadInvoices()">Refresh</button>
+          </div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>Reference</th><th>Customer</th><th>Amount</th><th>Status</th><th>Network</th><th>Created</th><th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="invTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- BINANCE -->
+      <div id="tab-binance" class="hidden">
+        <div class="card">
+          <h2>Binance API Config</h2>
+          <div id="bnStatus" class="msg info">Loading…</div>
+          <label>API Key</label>
+          <input id="bnKey" type="password" placeholder="Your Binance API key" autocomplete="off" />
+          <label>API Secret</label>
+          <input id="bnSecret" type="password" placeholder="Your Binance API secret" autocomplete="off" />
+          <div class="row">
+            <div>
+              <label>Deposit Coin</label>
+              <input id="bnCoin" value="USDT" />
+            </div>
+            <div>
+              <label>Network</label>
+              <input id="bnNet" value="TRX" />
+            </div>
+          </div>
+          <button onclick="saveBinance()">Save Binance Config</button>
+          <button class="secondary" onclick="fetchDepositAddr()">Get Deposit Address</button>
+          <div id="bnAddr" class="mono" style="margin-top:0.75rem;color:var(--ok)"></div>
+        </div>
+      </div>
+
+      <!-- MFS -->
+      <div id="tab-mfs" class="hidden">
+        <div class="card">
+          <h2>Mobile Money (SMS) Config</h2>
+          <div id="mfsStatus" class="msg info">Loading…</div>
+          <p style="color:var(--muted);font-size:0.9rem;margin-bottom:0.75rem">
+            Enter the personal numbers that receive payments. Then copy the SMS Webhook URL into the PayHub SMS Forwarder app.
+          </p>
+          <div class="row">
+            <div>
+              <label>bKash number</label>
+              <input id="mfsBkash" placeholder="01XXXXXXXXX" />
+            </div>
+            <div>
+              <label>Nagad number</label>
+              <input id="mfsNagad" placeholder="01XXXXXXXXX" />
+            </div>
+            <div>
+              <label>Rocket number</label>
+              <input id="mfsRocket" placeholder="01XXXXXXXXX" />
+            </div>
+            <div>
+              <label>Upay number</label>
+              <input id="mfsUpay" placeholder="01XXXXXXXXX" />
+            </div>
+          </div>
+          <label>Allowed SMS senders (comma-separated)</label>
+          <input id="mfsSenders" value="bKash,NAGAD,Rocket,16216,Upay" />
+          <button onclick="saveMfs()">Save MFS Config</button>
+          <button class="secondary" onclick="rotateMfsSecret()">Rotate Webhook Secret</button>
+          <div id="mfsUrl" class="mono" style="margin-top:0.75rem;word-break:break-all"></div>
+        </div>
+
+        <div class="card">
+          <h2>Test Parse (real SMS)</h2>
+          <label>Sender (e.g. bKash, NAGAD, 16216)</label>
+          <input id="testSender" placeholder="bKash" />
+          <label>SMS body</label>
+          <textarea id="testMsg" rows="3" placeholder="Paste a real received-money SMS here"></textarea>
+          <button onclick="testParse()">Test Parse</button>
+          <pre id="testResult" class="mono" style="margin-top:0.75rem;background:#0f1419;padding:0.75rem;border-radius:6px;font-size:0.85rem;overflow:auto"></pre>
+        </div>
+
+        <div class="card">
+          <h2>Recent SMS</h2>
+          <button class="secondary" onclick="loadSms()">Refresh SMS</button>
+          <div style="overflow-x:auto;margin-top:0.75rem">
+            <table>
+              <thead>
+                <tr><th>Provider</th><th>TrxID</th><th>Amount</th><th>Payer</th><th>Invoice</th><th>Received</th></tr>
+              </thead>
+              <tbody id="smsTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PROFILE -->
+      <div id="tab-profile" class="hidden">
+        <div class="card">
+          <h2>Profile</h2>
+          <label>Display name</label>
+          <input id="profName" />
+          <label>Default notify URL (webhook on paid)</label>
+          <input id="profNotify" placeholder="https://yourbot.com/webhook/payhub" />
+          <button onclick="saveProfile()">Save Profile</button>
+        </div>
+        <div class="card">
+          <h2>Bot API Key</h2>
+          <p style="color:var(--muted);font-size:0.9rem;margin-bottom:0.5rem">Use header <code>X-API-Key: ph_...</code> for bot integration.</p>
+          <div class="mono" id="botKey" style="word-break:break-all;margin-bottom:0.75rem"></div>
+          <button class="secondary" onclick="rotateBotKey()">Rotate Bot Key</button>
+        </div>
+        <div class="card">
+          <h2>Change Password</h2>
+          <label>Current password</label>
+          <input id="pwCur" type="password" />
+          <label>New password</label>
+          <input id="pwNew" type="password" />
+          <button onclick="changePassword()">Change Password</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = '';
+    let token = localStorage.getItem('ph_token') || '';
+    let user = null;
+
+    function headers(json = true) {
+      const h = {};
+      if (json) h['Content-Type'] = 'application/json';
+      if (token) h['Authorization'] = 'Bearer ' + token;
+      return h;
+    }
+
+    function showMsg(el, text, type = 'info') {
+      const box = typeof el === 'string' ? document.getElementById(el) : el;
+      if (!box) return;
+      box.innerHTML = text ? `<div class="msg ${type}">${text}</div>` : '';
+    }
+
+    async function api(path, opts = {}) {
+      const res = await fetch(API + path, { ...opts, headers: { ...headers(opts.body !== undefined), ...opts.headers } });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || data.message || res.statusText || 'Error');
+      return data;
+    }
+
+    function logout() {
+      token = '';
+      localStorage.removeItem('ph_token');
+      user = null;
+      document.getElementById('authBox').classList.remove('hidden');
+      document.getElementById('appBox').classList.add('hidden');
+    }
+
+    async function doLogin() {
+      try {
+        const data = await api('/api/v1/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ email: authEmail.value.trim(), password: authPass.value }),
+        });
+        token = data.access_token;
+        localStorage.setItem('ph_token', token);
+        await boot();
+      } catch (e) {
+        showMsg('authMsg', e.message, 'err');
+      }
+    }
+
+    async function doRegister() {
+      try {
+        const body = { email: authEmail.value.trim(), password: authPass.value };
+        if (authName.value.trim()) body.display_name = authName.value.trim();
+        const data = await api('/api/v1/auth/register', { method: 'POST', body: JSON.stringify(body) });
+        token = data.access_token;
+        localStorage.setItem('ph_token', token);
+        await boot();
+      } catch (e) {
+        showMsg('authMsg', e.message, 'err');
+      }
+    }
+
+    async function boot() {
+      try {
+        user = await api('/api/v1/me');
+        document.getElementById('authBox').classList.add('hidden');
+        document.getElementById('appBox').classList.remove('hidden');
+        userEmail.textContent = user.email;
+        botKey.textContent = user.bot_api_key;
+        profName.value = user.display_name || '';
+        profNotify.value = user.default_notify_url || '';
+        await Promise.all([loadStats(), loadInvoices(), loadBinance(), loadMfs()]);
+      } catch (e) {
+        logout();
+        showMsg('authMsg', e.message, 'err');
+      }
+    }
+
+    function showTab(name) {
+      document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+      ['invoices', 'binance', 'mfs', 'profile'].forEach(t => {
+        document.getElementById('tab-' + t).classList.toggle('hidden', t !== name);
+      });
+      if (name === 'mfs') loadSms();
+    }
+
+    function toggleMethod() {
+      methodWrap.classList.toggle('hidden', invCur.value !== 'BDT');
+    }
+
+    async function loadStats() {
+      try {
+        const s = await api('/api/v1/me/stats');
+        sPending.textContent = s.pending;
+        sPaid.textContent = s.paid;
+        sExpired.textContent = s.expired;
+        sVolume.textContent = Number(s.paid_volume).toFixed(2);
+      } catch (_) {}
+    }
+
+    async function loadInvoices() {
+      try {
+        const st = filterStatus.value;
+        const q = st ? `?status=${st}&limit=50` : '?limit=50';
+        const rows = await api('/api/v1/invoices' + q);
+        invTable.innerHTML = rows.map(r => `
+          <tr>
+            <td class="mono">${r.reference}</td>
+            <td>${esc(r.customer_id)}</td>
+            <td>${r.amount} ${r.currency}</td>
+            <td><span class="badge ${r.status}">${r.status}</span></td>
+            <td>${r.network || '—'}</td>
+            <td>${fmt(r.created_at)}</td>
+            <td class="flex">
+              ${r.status === 'PENDING' ? `<button class="secondary" style="padding:0.25rem 0.5rem;font-size:0.8rem" onclick="matchOne('${r.reference}')">Match</button>` : ''}
+              ${r.status === 'PENDING' && r.currency === 'BDT' ? `<button class="secondary" style="padding:0.25rem 0.5rem;font-size:0.8rem" onclick="claimTrx('${r.reference}')">Claim</button>` : ''}
+              ${r.status === 'PENDING' ? `<button class="danger" style="padding:0.25rem 0.5rem;font-size:0.8rem" onclick="expireOne('${r.reference}')">Expire</button>` : ''}
+            </td>
+          </tr>
+        `).join('') || '<tr><td colspan="7" style="color:var(--muted)">No invoices</td></tr>';
+      } catch (e) {
+        showMsg('globalMsg', e.message, 'err');
+      }
+    }
+
+    async function createInvoice() {
+      try {
+        const body = {
+          customer_id: invCust.value.trim(),
+          amount: invAmt.value,
+          currency: invCur.value,
+          unique_amount: invUnique.checked,
+        };
+        if (invNote.value.trim()) body.note = invNote.value.trim();
+        if (invNotify.value.trim()) body.notify_url = invNotify.value.trim();
+        if (invCur.value === 'BDT' && invMethod.value) body.method = invMethod.value;
+        const inv = await api('/api/v1/invoices', { method: 'POST', body: JSON.stringify(body) });
+        showMsg('globalMsg', `Created ${inv.reference} — ${inv.amount} ${inv.currency}` + (inv.deposit_address ? ` → ${inv.deposit_address}` : ''), 'ok');
+        invCust.value = ''; invAmt.value = '';
+        await Promise.all([loadInvoices(), loadStats()]);
+      } catch (e) {
+        showMsg('globalMsg', e.message, 'err');
+      }
+    }
+
+    async function runMatch() {
+      try {
+        const r = await api('/api/v1/match', { method: 'POST' });
+        showMsg('globalMsg', `Checked ${r.checked}, matched ${r.matched}, expired ${r.expired}`, r.matched ? 'ok' : 'info');
+        await Promise.all([loadInvoices(), loadStats()]);
+      } catch (e) {
+        showMsg('globalMsg', e.message, 'err');
+      }
+    }
+
+    async function matchOne(ref) {
+      try {
+        const r = await api(`/api/v1/invoices/${ref}/match`, { method: 'POST' });
+        showMsg('globalMsg', `Matched ${r.matched}`, r.matched ? 'ok' : 'info');
+        await Promise.all([loadInvoices(), loadStats()]);
+      } catch (e) {
+        showMsg('globalMsg', e.message, 'err');
+      }
+    }
+
+    async function claimTrx(ref) {
+      const trx = prompt('Enter TrxID / TxnID from customer:');
+      if (!trx) return;
+      try {
+        const inv = await api(`/api/v1/invoices/${ref}/claim`, {
+          method: 'POST',
+          body: JSON.stringify({ trx_id: trx.trim() }),
+        });
+        showMsg('globalMsg', `Claimed ${inv.reference} → PAID`, 'ok');
+        await Promise.all([loadInvoices(), loadStats()]);
+      } catch (e) {
+        showMsg('globalMsg', e.message, 'err');
+      }
+    }
+
+    async function expireOne(ref) {
+      if (!confirm('Expire this invoice?')) return;
+      try {
+        await api(`/api/v1/invoices/${ref}/expire`, { method: 'POST' });
+        await Promise.all([loadInvoices(), loadStats()]);
+      } catch (e) {
+        showMsg('globalMsg', e.message, 'err');
+      }
+    }
+
+    async function expireStale() {
+      try {
+        const r = await api('/api/v1/expire-stale', { method: 'POST' });
+        showMsg('globalMsg', `Expired ${r.expired} invoices`, 'info');
+        await Promise.all([loadInvoices(), loadStats()]);
+      } catch (e) {
+        showMsg('globalMsg', e.message, 'err');
+      }
+    }
+
+    async function loadBinance() {
+      try {
+        const c = await api('/api/v1/me/binance');
+        if (c.is_configured) {
+          bnStatus.className = 'msg ok';
+          bnStatus.textContent = `Configured · ${c.deposit_coin}/${c.deposit_network}` + (c.api_key_masked ? ` · key ${c.api_key_masked}` : '');
+          bnCoin.value = c.deposit_coin;
+          bnNet.value = c.deposit_network;
+        } else {
+          bnStatus.className = 'msg info';
+          bnStatus.textContent = 'Not configured — enter API key & secret';
+        }
+      } catch (e) {
+        bnStatus.className = 'msg err';
+        bnStatus.textContent = e.message;
+      }
+    }
+
+    async function saveBinance() {
+      try {
+        await api('/api/v1/me/binance', {
+          method: 'PUT',
+          body: JSON.stringify({
+            api_key: bnKey.value.trim(),
+            api_secret: bnSecret.value.trim(),
+            deposit_coin: bnCoin.value.trim() || 'USDT',
+            deposit_network: bnNet.value.trim() || 'TRX',
+          }),
+        });
+        bnKey.value = ''; bnSecret.value = '';
+        showMsg('globalMsg', 'Binance config saved', 'ok');
+        await loadBinance();
+      } catch (e) {
+        showMsg('globalMsg', e.message, 'err');
+      }
+    }
+
+    async function fetchDepositAddr() {
+      try {
+        const a = await api('/api/v1/me/deposit-address');
+        bnAddr.textContent = `${a.coin} (${a.network}): ${a.address}` + (a.tag ? ` tag=${a.tag}` : '');
+      } catch (e) {
+        bnAddr.textContent = e.message;
+      }
+    }
+
+    async function loadMfs() {
+      try {
+        const c = await api('/api/v1/me/mfs');
+        if (c.is_configured) {
+          mfsStatus.className = 'msg ok';
+          mfsStatus.textContent = 'Configured · ' + c.accounts.map(a => `${a.provider}: ${a.number}`).join(', ');
+          c.accounts.forEach(a => {
+            const el = document.getElementById('mfs' + a.provider.charAt(0).toUpperCase() + a.provider.slice(1));
+            if (el) el.value = a.number;
+          });
+          mfsSenders.value = c.allowed_senders || mfsSenders.value;
+          mfsUrl.innerHTML = c.sms_url
+            ? `SMS Webhook URL: <span class="copy" onclick="navigator.clipboard.writeText('${c.sms_url}')">${c.sms_url}</span> (click to copy)`
+            : '';
+        } else {
+          mfsStatus.className = 'msg info';
+          mfsStatus.textContent = 'Not configured — enter at least one number';
+          mfsUrl.innerHTML = '';
+        }
+      } catch (e) {
+        mfsStatus.className = 'msg err';
+        mfsStatus.textContent = e.message;
+      }
+    }
+
+    async function saveMfs() {
+      try {
+        const accounts = [];
+        [['bkash', mfsBkash], ['nagad', mfsNagad], ['rocket', mfsRocket], ['upay', mfsUpay]].forEach(([p, el]) => {
+          if (el.value.trim()) accounts.push({ provider: p, number: el.value.trim() });
+        });
+        if (!accounts.length) throw new Error('Enter at least one number');
+        await api('/api/v1/me/mfs', {
+          method: 'PUT',
+          body: JSON.stringify({ accounts, allowed_senders: mfsSenders.value.trim() }),
+        });
+        showMsg('globalMsg', 'MFS config saved', 'ok');
+        await loadMfs();
+      } catch (e) {
+        showMsg('globalMsg', e.message, 'err');
+      }
+    }
+
+    async function rotateMfsSecret() {
+      if (!confirm('Rotate webhook secret? Update the URL in the SMS forwarder app.')) return;
+      try {
+        await api('/api/v1/me/mfs/rotate-secret', { method: 'POST' });
+        showMsg('globalMsg', 'Secret rotated', 'ok');
+        await loadMfs();
+      } catch (e) {
+        showMsg('globalMsg', e.message, 'err');
+      }
+    }
+
+    async function testParse() {
+      try {
+        const r = await api('/api/v1/me/mfs/test-parse', {
+          method: 'POST',
+          body: JSON.stringify({ sender: testSender.value.trim(), message: testMsg.value }),
+        });
+        testResult.textContent = JSON.stringify(r, null, 2);
+      } catch (e) {
+        testResult.textContent = e.message;
+      }
+    }
+
+    async function loadSms() {
+      try {
+        const rows = await api('/api/v1/me/mfs/sms?limit=30');
+        smsTable.innerHTML = rows.map(r => `
+          <tr>
+            <td>${r.provider}</td>
+            <td class="mono">${r.trx_id}</td>
+            <td>${r.amount}</td>
+            <td class="mono">${r.payer_number}</td>
+            <td class="mono">${r.invoice_reference || '—'}</td>
+            <td>${fmt(r.received_at)}</td>
+          </tr>
+        `).join('') || '<tr><td colspan="6" style="color:var(--muted)">No SMS yet</td></tr>';
+      } catch (_) {}
+    }
+
+    async function saveProfile() {
+      try {
+        await api('/api/v1/me', {
+          method: 'PATCH',
+          body: JSON.stringify({
+            display_name: profName.value.trim() || null,
+            default_notify_url: profNotify.value.trim() || null,
+          }),
+        });
+        showMsg('globalMsg', 'Profile saved', 'ok');
+      } catch (e) {
+        showMsg('globalMsg', e.message, 'err');
+      }
+    }
+
+    async function rotateBotKey() {
+      if (!confirm('Rotate bot API key? Update your bots.')) return;
+      try {
+        const u = await api('/api/v1/me/rotate-bot-key', { method: 'POST' });
+        botKey.textContent = u.bot_api_key;
+        showMsg('globalMsg', 'Bot key rotated', 'ok');
+      } catch (e) {
+        showMsg('globalMsg', e.message, 'err');
+      }
+    }
+
+    async function changePassword() {
+      try {
+        await api('/api/v1/me/change-password', {
+          method: 'POST',
+          body: JSON.stringify({ current_password: pwCur.value, new_password: pwNew.value }),
+        });
+        pwCur.value = ''; pwNew.value = '';
+        showMsg('globalMsg', 'Password changed', 'ok');
+      } catch (e) {
+        showMsg('globalMsg', e.message, 'err');
+      }
+    }
+
+    function esc(s) {
+      const d = document.createElement('div');
+      d.textContent = s || '';
+      return d.innerHTML;
+    }
+    function fmt(iso) {
+      if (!iso) return '—';
+      try { return new Date(iso).toLocaleString(); } catch { return iso; }
+    }
+
+    // boot
+    if (token) boot();
+    else {
+      document.getElementById('authBox').classList.remove('hidden');
+      document.getElementById('appBox').classList.add('hidden');
+    }
+    // show name field on register focus
+    btnReg.addEventListener('mouseenter', () => {
+      lblName.classList.remove('hidden');
+      authName.classList.remove('hidden');
+    });
+  </script>
+</body>
+</html>

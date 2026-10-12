@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PayHub Admin</title>
+  <style>
+    :root {
+      --bg: #0f1419; --card: #1a2332; --border: #2d3a4f; --text: #e7ecf3;
+      --muted: #8b9bb4; --accent: #3b82f6; --ok: #10b981; --danger: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 1.25rem; }
+    header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0 1.5rem; flex-wrap: wrap; gap: 0.75rem; }
+    header h1 { font-size: 1.4rem; } header h1 span { color: var(--accent); }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem; margin-bottom: 1.25rem; }
+    .card h2 { font-size: 1.05rem; margin-bottom: 1rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+    label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 0.3rem; }
+    input {
+      width: 100%; padding: 0.55rem 0.75rem; border-radius: 6px; border: 1px solid var(--border);
+      background: #0f1419; color: var(--text); font-size: 0.95rem; margin-bottom: 0.75rem;
+    }
+    button {
+      display: inline-block; padding: 0.55rem 1rem; border-radius: 6px; border: none;
+      font-weight: 600; font-size: 0.9rem; cursor: pointer; background: var(--accent); color: #fff;
+    }
+    button.secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    button.danger { background: var(--danger); }
+    .hidden { display: none !important; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
+    .stat { background: #0f1419; border-radius: 8px; padding: 0.9rem; text-align: center; border: 1px solid var(--border); }
+    .stat .n { font-size: 1.4rem; font-weight: 700; }
+    .stat .l { font-size: 0.75rem; color: var(--muted); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th, td { text-align: left; padding: 0.5rem 0.4rem; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 500; font-size: 0.8rem; }
+    .badge { display: inline-block; padding: 0.15rem 0.45rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+    .badge.on { background: #064e3b; color: #34d399; }
+    .badge.off { background: #3f1a1a; color: #f87171; }
+    .msg { padding: 0.6rem 0.9rem; border-radius: 6px; margin-bottom: 0.75rem; font-size: 0.9rem; }
+    .msg.ok { background: #064e3b; color: #a7f3d0; }
+    .msg.err { background: #450a0a; color: #fecaca; }
+    .msg.info { background: #1e3a5f; color: #bfdbfe; }
+    .flex { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85rem; }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Pay<span>Hub</span> Admin</h1>
+      <div class="flex">
+        <span id="userEmail" class="mono" style="color:var(--muted);font-size:0.9rem"></span>
+        <button class="secondary" onclick="logout()">Logout</button>
+        <a href="/dashboard" style="color:var(--muted);font-size:0.85rem">Dashboard</a>
+        <a href="/" style="color:var(--muted);font-size:0.85rem">Home</a>
+      </div>
+    </header>
+
+    <div id="authBox">
+      <div class="card" style="max-width:420px;margin:2rem auto">
+        <h2>Admin Login</h2>
+        <div id="authMsg"></div>
+        <label>Email</label>
+        <input id="authEmail" type="email" />
+        <label>Password</label>
+        <input id="authPass" type="password" />
+        <button onclick="doLogin()">Login</button>
+      </div>
+    </div>
+
+    <div id="appBox" class="hidden">
+      <div id="globalMsg"></div>
+      <div class="stats" id="statsRow">
+        <div class="stat"><div class="n" id="sUsers">—</div><div class="l">Users</div></div>
+        <div class="stat"><div class="n" id="sActive">—</div><div class="l">Active</div></div>
+        <div class="stat"><div class="n" id="sBn">—</div><div class="l">With Binance</div></div>
+        <div class="stat"><div class="n" id="sInv">—</div><div class="l">Invoices</div></div>
+        <div class="stat"><div class="n" id="sPend">—</div><div class="l">Pending</div></div>
+        <div class="stat"><div class="n" id="sPaid">—</div><div class="l">Paid</div></div>
+        <div class="stat"><div class="n" id="sVol">—</div><div class="l">Volume</div></div>
+      </div>
+
+      <div class="card">
+        <h2>Users</h2>
+        <div class="flex" style="margin-bottom:0.75rem">
+          <input id="searchQ" placeholder="Search email / name" style="width:220px;margin:0" />
+          <button class="secondary" onclick="loadUsers()">Search</button>
+          <button class="secondary" onclick="loadStats()">Refresh Stats</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th><th>Email</th><th>Name</th><th>Active</th><th>Binance</th>
+                <th>Invoices</th><th>Paid</th><th>Created</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="userTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" id="userInvCard" class="hidden">
+        <h2>Invoices for user <span id="invUserId"></span></h2>
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Reference</th><th>Customer</th><th>Amount</th><th>Status</th><th>Network</th><th>Created</th>
+              </tr>
+            </thead>
+            <tbody id="userInvTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let token = localStorage.getItem('ph_token') || '';
+
+    function headers() {
+      const h = { 'Content-Type': 'application/json' };
+      if (token) h['Authorization'] = 'Bearer ' + token;
+      return h;
+    }
+
+    function showMsg(id, text, type = 'info') {
+      const box = document.getElementById(id);
+      if (!box) return;
+      box.innerHTML = text ? `<div class="msg ${type}">${text}</div>` : '';
+    }
+
+    async function api(path, opts = {}) {
+      const res = await fetch(path, { ...opts, headers: { ...headers(), ...opts.headers } });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || res.statusText || 'Error');
+      return data;
+    }
+
+    function logout() {
+      token = '';
+      localStorage.removeItem('ph_token');
+      document.getElementById('authBox').classList.remove('hidden');
+      document.getElementById('appBox').classList.add('hidden');
+    }
+
+    async function doLogin() {
+      try {
+        const data = await api('/api/v1/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ email: authEmail.value.trim(), password: authPass.value }),
+        });
+        if (!data.is_admin) throw new Error('Not an admin account');
+        token = data.access_token;
+        localStorage.setItem('ph_token', token);
+        await boot();
+      } catch (e) {
+        showMsg('authMsg', e.message, 'err');
+      }
+    }
+
+    async function boot() {
+      try {
+        const me = await api('/api/v1/me');
+        if (!me.is_admin) throw new Error('Admin only');
+        userEmail.textContent = me.email;
+        document.getElementById('authBox').classList.add('hidden');
+        document.getElementById('appBox').classList.remove('hidden');
+        await Promise.all([loadStats(), loadUsers()]);
+      } catch (e) {
+        logout();
+        showMsg('authMsg', e.message, 'err');
+      }
+    }
+
+    async function loadStats() {
+      try {
+        const s = await api('/api/v1/admin/stats');
+        sUsers.textContent = s.users_total;
+        sActive.textContent = s.users_active;
+        sBn.textContent = s.users_with_binance;
+        sInv.textContent = s.invoices_total;
+        sPend.textContent = s.invoices_pending;
+        sPaid.textContent = s.invoices_paid;
+        sVol.textContent = Number(s.paid_volume).toFixed(2);
+      } catch (e) {
+        showMsg('globalMsg', e.message, 'err');
+      }
+    }
+
+    async function loadUsers() {
+      try {
+        const q = searchQ.value.trim();
+        const rows = await api('/api/v1/admin/users' + (q ? `?q=${encodeURIComponent(q)}` : ''));
+        userTable.innerHTML = rows.map(u => `
+          <tr>
+            <td>${u.id}</td>
+            <td class="mono">${esc(u.email)}</td>
+            <td>${esc(u.display_name || '—')}</td>
+            <td><span class="badge ${u.is_active ? 'on' : 'off'}">${u.is_active ? 'Active' : 'Disabled'}</span></td>
+            <td>${u.binance_configured ? 'Yes' : '—'}</td>
+            <td>${u.invoice_count}</td>
+            <td>${u.paid_count}</td>
+            <td>${fmt(u.created_at)}</td>
+            <td class="flex">
+              ${u.is_admin ? '' : `<button class="secondary" style="padding:0.25rem 0.5rem;font-size:0.8rem" onclick="toggleUser(${u.id})">${u.is_active ? 'Disable' : 'Enable'}</button>`}
+              <button class="secondary" style="padding:0.25rem 0.5rem;font-size:0.8rem" onclick="viewInvoices(${u.id})">Invoices</button>
+              <button class="secondary" style="padding:0.25rem 0.5rem;font-size:0.8rem" onclick="forceMatch(${u.id})">Match</button>
+            </td>
+          </tr>
+        `).join('') || '<tr><td colspan="9" style="color:var(--muted)">No users</td></tr>';
+      } catch (e) {
+        showMsg('globalMsg', e.message, 'err');
+      }
+    }
+
+    async function toggleUser(id) {
+      try {
+        await api(`/api/v1/admin/users/${id}/toggle-active`, { method: 'POST' });
+        await loadUsers();
+        await loadStats();
+      } catch (e) {
+        showMsg('globalMsg', e.message, 'err');
+      }
+    }
+
+    async function forceMatch(id) {
+      try {
+        const r = await api(`/api/v1/admin/users/${id}/match`, { method: 'POST' });
+        showMsg('globalMsg', `User ${id}: checked ${r.checked}, matched ${r.matched}`, r.matched ? 'ok' : 'info');
+      } catch (e) {
+        showMsg('globalMsg', e.message, 'err');
+      }
+    }
+
+    async function viewInvoices(id) {
+      try {
+        const rows = await api(`/api/v1/admin/users/${id}/invoices?limit=50`);
+        invUserId.textContent = '#' + id;
+        userInvCard.classList.remove('hidden');
+        userInvTable.innerHTML = rows.map(r => `
+          <tr>
+            <td class="mono">${r.reference}</td>
+            <td>${esc(r.customer_id)}</td>
+            <td>${r.amount} ${r.currency}</td>
+            <td>${r.status}</td>
+            <td>${r.network || '—'}</td>
+            <td>${fmt(r.created_at)}</td>
+          </tr>
+        `).join('') || '<tr><td colspan="6" style="color:var(--muted)">No invoices</td></tr>';
+      } catch (e) {
+        showMsg('globalMsg', e.message, 'err');
+      }
+    }
+
+    function esc(s) {
+      const d = document.createElement('div');
+      d.textContent = s || '';
+      return d.innerHTML;
+    }
+    function fmt(iso) {
+      if (!iso) return '—';
+      try { return new Date(iso).toLocaleString(); } catch { return iso; }
+    }
+
+    if (token) boot();
+  </script>
+</body>
+</html>
